@@ -3,6 +3,7 @@ package kr.co.tjeit.socialloginpractice;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.util.Log;
 
 import com.kakao.auth.ApprovalType;
 import com.kakao.auth.AuthType;
@@ -17,8 +18,8 @@ import com.kakao.auth.KakaoSDK;
 
 public class GlobalApplication extends Application {
 
-    private static volatile GlobalApplication instance = null;
-    private static volatile Activity currentActivity = null;
+
+
 
 
     private static class KakaoSDKAdapter extends KakaoAdapter {
@@ -27,7 +28,12 @@ public class GlobalApplication extends Application {
          * 필요한 상황에서만 override해서 사용하면 됨.
          * @return Session의 설정값.
          */
+        Context mContext;
 
+        public KakaoSDKAdapter(Context context){
+            super();
+            mContext = context;
+        }
 
 
 
@@ -66,26 +72,10 @@ public class GlobalApplication extends Application {
             return new IApplicationConfig() {
                 @Override
                 public Context getApplicationContext() {
-                    return GlobalApplication.getGlobalApplicationContext();
+                    return mContext;
                 }
             };
         }
-    }
-
-    public static Activity getCurrentActivity() {
-        return currentActivity;
-    }
-
-    public static void setCurrentActivity(Activity currentActivity) {
-        GlobalApplication.currentActivity = currentActivity;
-    }
-
-
-
-    public static GlobalApplication getGlobalApplicationContext() {
-        if(instance == null)
-            throw new IllegalStateException("this application does not inherit com.kakao.GlobalApplication");
-        return instance;
     }
 
 
@@ -94,7 +84,9 @@ public class GlobalApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
-        KakaoSDK.init(new KakaoSDKAdapter());
+        Log.d("앱","실행준비중");
+
+        KakaoSDK.init(new KakaoSDKAdapter(getApplicationContext()));
 
     }
 }

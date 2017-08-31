@@ -15,6 +15,13 @@ import com.facebook.ProfileTracker;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
+import com.kakao.auth.ISessionCallback;
+import com.kakao.auth.Session;
+import com.kakao.network.ErrorResult;
+import com.kakao.usermgmt.UserManagement;
+import com.kakao.usermgmt.callback.MeResponseCallback;
+import com.kakao.usermgmt.response.model.UserProfile;
+import com.kakao.util.exception.KakaoException;
 
 import java.util.Arrays;
 
@@ -24,11 +31,14 @@ import kr.co.tjeit.socialloginpractice.util.GlobalData;
 
 public class LoginActivity extends BaseActivity {
 
+    KakaoSessionCallback ksc;
+
     private android.widget.EditText idEdt;
     private android.widget.EditText pwEdt;
     private android.widget.Button loginBtn;
 
     CallbackManager cm;
+    ProfileTracker pt;
     private com.facebook.login.widget.LoginButton fbLoginBtn;
     private com.kakao.usermgmt.LoginButton comkakaologin;
     private Button customFacebookLoginBtn;
@@ -45,6 +55,17 @@ public class LoginActivity extends BaseActivity {
         setupEvent();
         setValues();
         GlobalData.initGlobalData();
+
+//        1. 카카오톡 로그인에 성공하면
+//        어떤 사람이 로그인했는지 토스트로 띄워주기.
+
+//        2. LoginActivity가 켜질때, 무조건 로그아웃 처리
+        UserManagement.requestLogout(null);
+
+
+
+//        ※ 로그인에 성공하면, 그 사람의 아이디 / "비번없음" / 이름 / 프사 저장 후
+//         => MainActivity에서 보여주도록
     }
 
     @Override
@@ -101,8 +122,17 @@ public class LoginActivity extends BaseActivity {
 
     }
 
+
+
+
     @Override
     public void setValues() {
+
+//        카카오톡 로그인 처리 과정.
+
+        ksc = new KakaoSessionCallback();
+        Session.getCurrentSession().addCallback(ksc);
+
 
 //        로그인 처리가 완료되면, 우리 앱에서도 반영하기 위해
 //        콜백을 만들어 등록하는 과정.
@@ -129,7 +159,7 @@ public class LoginActivity extends BaseActivity {
 //        ProfileTracker? 접속한 사용자가 바뀌는 상황을 감지.
 //        새로 로그인 / 로그아웃 시에 동작
 
-        ProfileTracker pt = new ProfileTracker() {
+        pt = new ProfileTracker() {
             @Override
             protected void onCurrentProfileChanged(Profile oldProfile, Profile currentProfile) {
                 if (currentProfile == null) {
@@ -161,9 +191,12 @@ public class LoginActivity extends BaseActivity {
 
     }
 
-    //    페이스북 로그인 화면을 갔다가 돌아오면 콜백매니저가 자동으로 처리할 수 있도록 코딩
+    //    페이스북 OR 카카오톡 로그인 화면을 갔다가 돌아오면 콜백매니저가 자동으로 처리할 수 있도록 코딩
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(Session.getCurrentSession().handleActivityResult(requestCode,resultCode,data)){
+            return;
+        }
         super.onActivityResult(requestCode, resultCode, data);
         cm.onActivityResult(requestCode, resultCode, data);
     }
@@ -179,4 +212,48 @@ public class LoginActivity extends BaseActivity {
         this.idEdt = (EditText) findViewById(R.id.idEdt);
 
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        pt.stopTracking();
+        Session.getCurrentSession().removeCallback(ksc);
+
+    }
+
+    private class KakaoSessionCallback implements ISessionCallback{
+
+        @Override
+        public void onSessionOpened() {
+            Toast.makeText(mContext, "로그인 성공.", Toast.LENGTH_SHORT).show();
+            UserManagement.requestMe(new MeResponseCallback() {
+                @Override
+                public void onSessionClosed(ErrorResult errorResult) {
+
+                }
+
+                @Override
+                public void onNotSignedUp() {
+
+                }
+
+                @Override
+                public void onSuccess(UserProfile result) {
+//                    Toast.makeText(mContext, result.getNickname()+"님 접속", Toast.LENGTH_SHORT).show();
+                    ContextUtil.login(mContext,result.getId()+"","비번없음",result.getNickname(),result.getProfileImagePath());
+                    Intent intent = new Intent(mContext, MainActivity.class);
+                    startActivity(intent);
+                    finish();
+
+                }
+            });
+        }
+
+        @Override
+        public void onSessionOpenFailed(KakaoException exception) {
+            exception.printStackTrace();
+        }
+    }
+
+
 }

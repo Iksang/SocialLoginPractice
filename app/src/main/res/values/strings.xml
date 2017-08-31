@@ -2,5 +2,5 @@
     <string name="app_name">SocialLoginPractice</string>
     <string name="facebook_app_id">114045209265306</string>
     <string name="fb_login_protocol_scheme">fb114045209265306</string>
-    <string name="kakao_app_key">5d2f9814e18463dad137c532df146b57</string>
+
 </resources>
